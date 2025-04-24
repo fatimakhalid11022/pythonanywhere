@@ -1,6 +1,6 @@
 import os
 import json
-import python_weather
+
 import asyncio
 import logging
 from dotenv import load_dotenv
@@ -81,30 +81,7 @@ async def retreive_get_weather(city: str) -> str:
         print(f"Current temperature in {city}: {temperatures}")
         return json.dumps({'temperature': temperatures})
 
-# Tools for function calling
-tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "retreive_get_weather",
-            "description": "Get current weather of any city",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "city": {
-                        "type": "string",
-                        "description": "The city name"
-                    }
-                },
-                "required": ["city"]
-            }
-        }
-    }
-]
 
-names_to_functions = {
-    "retreive_get_weather": retreive_get_weather
-}
 
 # Flask setup
 app = Flask(__name__)
@@ -115,7 +92,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB limit
 # Load Whisper model once at startup
 whisper_model = whisper.load_model("base")
 
-message_history = []
+message_history : list[] = []
 
 @app.route("/chat", methods=["POST"])
 async def chat():
@@ -137,43 +114,8 @@ async def chat():
 
     messages = message_history + [{"role": "user", "content": content}]
     
-    
-       # Check if the user input is related to payment information
-    if any(keyword in user_input.lower() for keyword in ["temperature","weather"]):
-        messages = [
-            {"role": "system", "content" : "You are a helpful assistant that can provide weather information. use the tool's output to respond to the user's query in a friendly, single-line message."},
-            {"role": "user", "content": user_input}
-        ]
-        chat_response = client.chat.complete(
-            model=model,
-            messages=messages,
-            tools=tools,
-            tool_choice="any"
-        )
 
-
-        messages.append(chat_response.choices[0].message)
-        
-        tool_call = chat_response.choices[0].message.tool_calls[0]
-        function_name = tool_call.function.name
-        function_params = json.loads(tool_call.function.arguments)
-        tool_call_id = tool_call.id
-        
-        if os.name == 'nt':
-           asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-        function_result = await names_to_functions[function_name](**function_params)
-        
-        messages.append({"role": "tool", "name": function_name, "content": f"use this knowledge {function_result} in order to response the user query.Activate function calling and give single line response .Talk in a friendly way", "tool_call_id": tool_call.id})
-        chat_response = client.chat.complete(
-            model=model,
-            messages=messages,
-        )
-
-        response_content = chat_response.choices[0].message.content
-        logging.info(f"Weather response: {response_content}")
-        return jsonify({"response": response_content})
-    # If the query is not related to weather, search the PDF
+   
     if user_input and documents:
         hits = search_documents(user_input)
         context = "\n".join(hits)
