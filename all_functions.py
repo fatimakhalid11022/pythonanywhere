@@ -1,7 +1,5 @@
 import os
-import json
 
-import asyncio
 import logging
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
@@ -73,13 +71,6 @@ def search_documents(query):
     )
     return [hit.payload["content"] for hit in hits]
 
-# Weather function
-async def retreive_get_weather(city: str) -> str:
-    async with python_weather.Client(unit=python_weather.METRIC) as client:
-        weather = await client.get(city)
-        temperatures = weather.temperature
-        print(f"Current temperature in {city}: {temperatures}")
-        return json.dumps({'temperature': temperatures})
 
 
 
